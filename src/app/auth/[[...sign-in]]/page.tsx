@@ -12,7 +12,8 @@ export default function Page() {
     signIn?.authenticateWithRedirect({
       strategy: "oauth_github",
       redirectUrl: "/sso-callback",
-      redirectUrlComplete: "/dashboard",
+      redirectUrlComplete:
+        process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL as string,
     });
   };
 

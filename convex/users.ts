@@ -2,7 +2,7 @@ import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 
-async function getUserByOwnerId(ctx: QueryCtx, clerkId: string) {
+async function getUserByClerkId(ctx: QueryCtx, clerkId: string) {
   return await ctx.db
     .query("users")
     .withIndex("byClerkId", (q) => q.eq("clerkId", clerkId))
@@ -17,7 +17,7 @@ export const upsertFromClerk = internalMutation({
     const firstName = data.first_name;
     const lastName = data.last_name;
 
-    const user = await getUserByOwnerId(ctx, clerkId);
+    const user = await getUserByClerkId(ctx, clerkId);
 
     if (!user) {
       await ctx.db.insert("users", {
@@ -35,7 +35,7 @@ export const upsertFromClerk = internalMutation({
 export const deleteFromClerk = internalMutation({
   args: { clerkId: v.string() },
   async handler(ctx, { clerkId }) {
-    const user = await getUserByOwnerId(ctx, clerkId);
+    const user = await getUserByClerkId(ctx, clerkId);
 
     if (user) {
       await ctx.db.delete(user._id);
