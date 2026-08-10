@@ -4,8 +4,17 @@ import { v } from "convex/values";
 export default defineSchema({
   users: defineTable({
     clerkId: v.string(),
+    username: v.string(),
     email: v.string(),
     firstName: v.string(),
     lastName: v.string(),
   }).index("byClerkId", ["clerkId"]),
+
+  repos: defineTable({
+    userId: v.id("users"),
+    repoId: v.number(), 
+    fullName: v.string(), // repo fullName
+    webhookId: v.number(),
+  }).index("byUserId", ["userId"])
+      .index("byRepoId", ["repoId"]),
 });
