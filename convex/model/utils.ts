@@ -17,7 +17,6 @@ export async function getUserByClerkId(
     .withIndex("byClerkId", (q) => q.eq("clerkId", clerkId))
     .unique();
 
-  if (!user) throw new Error("User doesn't exist");
   return user;
 }
 

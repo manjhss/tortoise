@@ -27,7 +27,12 @@ export const upsertFromClerk = internalMutation({
         lastName,
       });
     } else {
-      console.warn(`Can't create user for clerk ID: ${clerkId}`);
+      await ctx.db.patch(user._id, {
+        username,
+        email,
+        firstName,
+        lastName,
+      });
     }
   },
 });

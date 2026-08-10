@@ -1,7 +1,7 @@
 import { internal } from "./_generated/api";
-import { action, internalMutation } from "./_generated/server";
+import { action, internalMutation, internalQuery, query } from "./_generated/server";
 import { v } from "convex/values";
-import { gitHubToken, verifyAuth } from "./model/utils";
+import { getUserByClerkId, gitHubToken, verifyAuth } from "./model/utils";
 
 export const listAllRepos = action({
   args: {},
@@ -17,11 +17,27 @@ export const listAllRepos = action({
   },
 });
 
+export const listConnectedRepos = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await getUserByClerkId(ctx, identity.subject);
+    if (!user) return [];
+
+    return await ctx.db
+      .query("repos")
+      .withIndex("byUserId", (q) => q.eq("userId", user._id))
+      .collect();
+  },
+});
+
 export const connectRepo = action({
   args: {
-    username: v.string(),
-    repo: v.string(),
-    repoId: v.number(),
+    id: v.number(),
+    name: v.string(),
+    owner: v.string(),
   },
   handler: async (ctx, args) => {
     const identity = await verifyAuth(ctx);
@@ -30,11 +46,12 @@ export const connectRepo = action({
     const currentUser = await ctx.runQuery(internal.users.getByClerkId, {
       clerkId: identity.subject,
     });
+    if (!currentUser) throw new Error("User doesn't exist");
 
-    const webhookUrl = `${process.env.APP_URL}/api/webhooks/github`;
+    const webhookUrl = `${process.env.APP_URL}/api/github-webhook`;
 
     const res = await fetch(
-      `https://api.github.com/repos/${args.username}/${args.repo}/hooks`,
+      `https://api.github.com/repos/${args.owner}/${args.name}/hooks`,
       {
         method: "POST",
         headers: {
@@ -64,8 +81,8 @@ export const connectRepo = action({
 
     await ctx.runMutation(internal.repos.saveConnectedRepo, {
       userId: currentUser._id,
-      repoId: args.repoId,
-      fullName: `${args.username}/${args.repo}`,
+      repoId: args.id,
+      fullName: `${args.owner}/${args.name}`,
       webhookId: webhook.id,
     });
 
@@ -84,5 +101,69 @@ export const saveConnectedRepo = internalMutation({
     await ctx.db.insert("repos", {
       ...args,
     });
+  },
+});
+
+export const getConnectedRepo = internalQuery({
+  args: { connectionId: v.id("repos") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.connectionId);
+  },
+});
+
+export const disconnectRepo = action({
+  args: {
+    connectionId: v.id("repos"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await verifyAuth(ctx);
+    const githubToken = await gitHubToken(identity.subject);
+
+    const connection = await ctx.runQuery(internal.repos.getConnectedRepo, {
+      connectionId: args.connectionId,
+    });
+
+    if (!connection) {
+      throw new Error("Connection not found");
+    }
+
+    const currentUser = await ctx.runQuery(internal.users.getByClerkId, {
+      clerkId: identity.subject,
+    });
+    if (!currentUser || connection.userId !== currentUser._id) {
+      throw new Error("Not authorized to disconnect this repo");
+    }
+
+    const [owner, repo] = connection.fullName.split("/");
+
+    const res = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/hooks/${connection.webhookId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: "application/vnd.github+json",
+        },
+      },
+    );
+
+    // 404 means GitHub already doesn't have it — treat as success, not an error
+    if (!res.ok && res.status !== 404) {
+      const err = await res.text();
+      throw new Error(`Failed to delete webhook: ${err}`);
+    }
+
+    await ctx.runMutation(internal.repos.deleteConnectedRepo, {
+      connectionId: args.connectionId,
+    });
+
+    return { success: true };
+  },
+});
+
+export const deleteConnectedRepo = internalMutation({
+  args: { connectionId: v.id("repos") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.connectionId);
   },
 });

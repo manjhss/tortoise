@@ -13,7 +13,7 @@ export default defineSchema({
   repos: defineTable({
     userId: v.id("users"),
     repoId: v.number(), 
-    fullName: v.string(), // repo fullName
+    fullName: v.string(),
     webhookId: v.number(),
   }).index("byUserId", ["userId"])
       .index("byRepoId", ["repoId"]),
