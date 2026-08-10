@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && next build",
+    "build": "npx convex codegen && npm run typecheck && next build",
     "start": "next start",
     "lint": "eslint ."
   },
