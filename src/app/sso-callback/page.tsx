@@ -11,10 +11,22 @@ export default function SSOCallback() {
   useEffect(() => {
     if (isLoaded && isSignedIn) {
       router.replace(
-        process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL as string,
+        (process.env
+          .NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL as string) ||
+          (process.env
+            .NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL as string),
       );
     }
   }, [isLoaded, isSignedIn, router]);
 
-  return <AuthenticateWithRedirectCallback />;
+  return (
+    <AuthenticateWithRedirectCallback
+      signInFallbackRedirectUrl={
+        process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL as string
+      }
+      signUpFallbackRedirectUrl={
+        process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL as string
+      }
+    />
+  );
 }
