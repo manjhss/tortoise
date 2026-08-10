@@ -1,11 +1,5 @@
-"use client";
+import { Dashboard } from "@/src/features/dashboard/repos/components/dashboard";
 
-import { Button } from "@/src/components/ui/button";
-
-export default function Dashboard() {
-  return (
-    <div>
-      <Button>byee</Button>
-    </div>
-  );
+export default async function Page() {
+  return <Dashboard />;
 }
