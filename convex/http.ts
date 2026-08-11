@@ -2,6 +2,8 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Webhook } from "svix";
+import { verifySignature } from "./model/utils";
+// import { verifySignature } from "./model/github";
 
 const http = httpRouter();
 
@@ -24,7 +26,10 @@ http.route({
       }
 
       const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
-      const event = wh.verify(payloadString, svixHeaders) as { type: string; data: Record<string, unknown> };
+      const event = wh.verify(payloadString, svixHeaders) as {
+        type: string;
+        data: Record<string, unknown>;
+      };
 
       switch (event.type) {
         case "user.created":
@@ -34,7 +39,9 @@ http.route({
           });
           break;
         case "user.deleted":
-          await ctx.runMutation(internal.users.deleteFromClerk, { clerkId: event.data.id as string });
+          await ctx.runMutation(internal.users.deleteFromClerk, {
+            clerkId: event.data.id as string,
+          });
           break;
         default:
           console.log("Ignored webhook event:", event.type);
@@ -42,7 +49,50 @@ http.route({
 
       return new Response(null, { status: 200 });
     } catch (error) {
-      console.error("Webhook processing failed:", error instanceof Error ? error.message : "Unknown error");
+      console.error(
+        "Webhook processing failed:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
+      return new Response("Webhook processing failed", { status: 400 });
+    }
+  }),
+});
+
+http.route({
+  path: "/github-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const payload = await request.text();
+      const signature = request.headers.get("x-hub-signature-256");
+      const event = request.headers.get("x-github-event");
+
+      if (!verifySignature(payload, signature)) {
+        return new Response("Invalid signature", { status: 401 });
+      }
+
+      const data = JSON.parse(payload);
+
+      if (event === "pull_request") {
+        const pr = {
+          repoId: data.repository.id,
+          prNumber: data.pull_request.number,
+          action: data.action,
+          title: data.pull_request.title,
+          author: data.pull_request.user.login,
+          url: data.pull_request.html_url,
+          payload: data,
+        };
+
+        console.log(pr);
+      }
+
+      return new Response("OK", { status: 200 });
+    } catch (error) {
+      console.error(
+        "Webhook processing failed:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
       return new Response("Webhook processing failed", { status: 400 });
     }
   }),
