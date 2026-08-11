@@ -34,8 +34,11 @@ export async function verifySignature(
   payload: string,
   signature: string | null,
 ): Promise<boolean> {
+  if (!signature) return false;
+
   const encoder = new TextEncoder();
   const secret = process.env.GITHUB_WEBHOOK_SECRET!;
+
   const key = await crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),
@@ -43,11 +46,22 @@ export async function verifySignature(
     false,
     ["verify"],
   );
-  const signatureBytes = Uint8Array.from(Buffer.from(signature!, "hex"));
+
+  const hex = signature.replace("sha256=", "");
+  const signatureBytes = hexToBytes(hex);
+
   return await crypto.subtle.verify(
     "HMAC",
     key,
     signatureBytes,
     encoder.encode(payload),
   );
+}
+
+function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes;
 }
