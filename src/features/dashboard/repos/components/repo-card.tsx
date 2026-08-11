@@ -15,7 +15,7 @@ import { LockIcon } from "@hugeicons/core-free-icons";
 
 export function RepoCardGroup({ children }: { children: React.ReactNode }) {
   return (
-    <div className="w-full h-100 rounded-4xl overflow-hidden scroll-auto">
+    <div className="w-full h-100 rounded-4xl overflow-y-auto scrollbar-none">
       <ButtonGroup orientation={"vertical"} className="w-full">
         {children}
       </ButtonGroup>
