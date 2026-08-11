@@ -64,7 +64,7 @@ export const connectRepo = action({
     });
     if (!currentUser) throw new Error("User doesn't exist");
 
-    const webhookUrl = `${process.env.APP_URL}/api/github-webhook`;
+    const webhookUrl = `${process.env.APP_URL}/github-webhook`;
 
     const res = await fetch(
       `https://api.github.com/repos/${args.owner}/${args.name}/hooks`,

@@ -3,7 +3,6 @@ import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Webhook } from "svix";
 import { verifySignature } from "./model/utils";
-// import { verifySignature } from "./model/github";
 
 const http = httpRouter();
 
