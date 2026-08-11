@@ -9,11 +9,27 @@ export const listAllRepos = action({
     const identity = await verifyAuth(ctx);
     const githubToken = await gitHubToken(identity.subject);
 
-    const res = await fetch("https://api.github.com/user/repos", {
-      headers: { Authorization: `Bearer ${githubToken}` },
-    });
+    let page = 1;
+    let allRepos: any[] = [];
 
-    return res.json();
+    while (true) {
+      const res = await fetch(
+        `https://api.github.com/user/repos?visibility=all&sort=updated&per_page=100&page=${page}`,
+        {
+          headers: {
+            Authorization: `Bearer ${githubToken}`,
+            Accept: "application/vnd.github+json",
+          },
+        },
+      );
+      const data = await res.json();
+      if (data.length === 0) break;
+
+      allRepos = allRepos.concat(data);
+      page++;
+    }
+
+    return allRepos;
   },
 });
 
